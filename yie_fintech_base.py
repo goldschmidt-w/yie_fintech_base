@@ -8,20 +8,21 @@ import sqlalchemy
 
 def get_stock_id():
 	"""
-	get stock_ids from 產業分表
+	get stock_ids from industry webpage
 	可以參考 廖敏煌 的方法
 	demands:
 
+
 	process:
-	import request
-	import pandas as pd
-	pd.read_html
+	(1)import request
+	(2)import pandas as pd
+	(3)pd.read_html
 	"""
 
 
 def update_stock_id():
 	"""
-	update stosck id in  stock_ids table
+	update stosck_id in  stock_ids table
 	demands：
 
 	process:
@@ -30,8 +31,23 @@ def update_stock_id():
 
 	"""
 
-def generate_urls(the_base_url, stock_ids):
-	
+
+def generate_urls(the_base_url, stock_ids, *arg):
+	"""
+	generate the specific urls:
+	demands:
+	(1) trade stock_id, status, spohlcv
+	    stock_id, price, open(yclose), high, low, close, volume
+	    https://tw.stock.yahoo.com/quote/8926.TW
+
+	(2) IFRS seasonly reports
+		https://mops.twse.com.tw/server-java/t164sb01?step=1\
+		&CO_ID=8926&SYEAR=2021&SSEASON=4&REPORT_ID=C
+
+	process:
+	(1) integrate the_base_url and the specific url_parameters
+
+	"""
 	urls = []
 	for stock_id in stock_ids:
 		urls.append(the_base_url + stock_id)
@@ -44,13 +60,21 @@ def get_resource(urls):
 	return requests.get(urls, headers=headers)
 
 
-def parse_html(html_str):
+def parse_static_html(html_str):
 
 	return bs(html_str, 'lxml')
 
 
-def get_stock_spohlcv(bs_dom, stock_id):
+def strainer_stock_spohlcv(bs_dom, stock_id):
+	"""
+	continued from parse_static_html(), 
+	retrieve pohlcv from the "https://tw.stock.yahoo.com/quote/8926.TW"
+	response.
 
+	?close
+
+
+	"""
 	table = bs_dom.find_all(text='成交')[0].parent.parent.parent
 	status = table.select('tr')[0].select('th')[2].text
 	name = table.select('tr')[1].select('td')[0].text
@@ -63,14 +87,23 @@ def get_stock_spohlcv(bs_dom, stock_id):
 	return [stock_id, name[4:-6], status, price, yclose, high, low, volume]
 
 
-def web_scrape_bot(urls):
+def stock_spohlcv_bot(urls):
+	"""
+	strainer_stock_spohlcv provides spohlcv from a fixed table
+	Herein, "zipped" spohlcv, sinnce s(stock_id is trigger)
+	demand:
+	
+	process:
+	calling functions above to generate spohlcv
+
+	"""
 
 	stock_ids_spohlv = [['代碼', '名稱', '狀態', '股價', '昨收', '最高', '最低', '張數']]
 	#                  stock_id, name, status, price, yclose, hight, low, volume
 	for url in urls:
 		response = get_resource(url)
 		if response.status_code == requests.codes.ok:
-			bs_dom = parse_html(response.text)
+			bs_dom = parse_static_html(response.text)
 			stock_ids_spohlv_result = get_stock_spohlcv(bs_dom, stock_id)
 			stock_ids_spohlv.append(stock_ids_spohlv_result)
 			time.sleep(0.25)
@@ -79,13 +112,80 @@ def web_scrape_bot(urls):
 	return stock_ids_spohlv
 
 
+def update_spohlcv_tosql(stock_id):
+	"""
+
+	"""
+
+
+def strainer_balance_sheet(bs_dom, stock_id, year, searon, *arg):
+	"""
+	IFRS_balance_keys = {'3200': '資本公積合計',
+						 '3300': '保留盈餘合計',
+						 '3500': '庫藏股票',
+						 }
+
+	"""
+
+
+def update_balance_tosql(stock_id):
+	"""
+	
+	"""
+
+
+def strainer_revenue_sheet(bs_dom, stock_id, year, seaon, *arg):
+	"""
+	IFRS_revenue_keys = {'4000': '營業收入合計', 
+						'7000: '營業外收入及支出合計',
+						'8200': '本期淨利（淨損）',
+						'8300': '其他綜合損益（淨額）',
+						'9750': '基本每股盈餘合計',
+						'9850': '稀釋每股盈餘合計',
+						}
+
+	"""
+
+
+def update_revenue_tosql(stock_id):
+	"""
+	
+	"""
+
+
+def strainer_external_invest(bs_dom, stock_id, year, season, *arg):
+	"""
+
+
+	"""
+
+
+def update_external_invest_tosql(stock_id):
+	"""
+	
+	"""
+
+
+def strainer_chn_invest(bs_dom, stock_id, year, season, *arg):
+	"""
+
+	"""
+
+
+def update_chn_invest_tosql(stock_id):
+	"""
+	
+	"""
+
+
 def main():
 	the_base_url = ''
 	stock_ids = []
 	urls = generate_urls(the_base_url, stock_ids)
-	stock_ids_spohlv = web_scrape_bot(urls)
+	stock_ids_spohlv = stock_spohlcv_bot(urls)
 	for stock in stock_ids_spohlv:
 		print(stock)
+
 
 if __name__ == '__main__':
 	main()
